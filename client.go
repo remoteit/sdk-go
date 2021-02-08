@@ -21,8 +21,8 @@ type ClientCommunicator interface {
 }
 
 type Client struct {
-	apiKey         string
 	apiURL         string
+	apiKey         string
 	client         *http.Client
 	token          string
 	productVersion string
@@ -32,8 +32,8 @@ type Client struct {
 
 func NewClient(apiURL string, apiKey string, apiTimeout time.Duration, productVersion string, os string, osVersion string) *Client {
 	return &Client{
-		apiKey: apiURL,
-		apiURL: apiKey,
+		apiURL: apiURL,
+		apiKey: apiKey,
 		client: &http.Client{
 			Timeout: apiTimeout,
 		},
