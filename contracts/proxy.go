@@ -1,43 +1,15 @@
-package api
+package contracts
 
-import (
-	"encoding/json"
-	"strings"
+type CreateProxyResponse struct {
+	Status     string              `json:"status"`     // "true"
+	Reason     string              `json:"reason"`     // "..."
+	Connection ProxyConnectionInfo `json:"connection"` //
 
-	apiContracts "github.com/remoteit/sdk-go/contracts"
-	errorx "github.com/remoteit/systemkit-errorx"
-)
-
-// CreateProxyRequest -
-//
-// SAMPLE
-// curl 'https://api.remot3.it/apv/v27/device/connect/'
-// -H 'developerKey: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-// -H 'token: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-// -H 'Accept-Language: en-US,en;q=0.9'
-// --data-binary '{"deviceaddress":"80:00:00:00:01:00:40:C4","devicetype":28,"hostip":"255.255.255.255","wait":"true","isolate":"domain=app.remote.it"}'
-//
-type CreateProxyRequest struct {
-	DeviceAddress string `json:"deviceaddress,omitempty"` // "80:00:00:00:01:00:40:C4"
-	DeviceType    int    `json:"devicetype,omitempty"`    // 28
-	HostIP        string `json:"hostip,omitempty"`        // "255.255.255.255"
-	Wait          string `json:"wait,omitempty"`          // "true"
-	Isolate       string `json:"isolate,omitempty"`       // "domain=app.remote.it"
-	Concurrent    bool   `json:"concurrent,omitempty"`    // FIXME: will this be remvoed in the future ?
-	ProxyType     string `json:"proxyType,omitempty"`     // proxyType=port
-}
-
-// NewCreateProxyRequest -
-func NewCreateProxyRequest(deviceAddress string, deviceType int) CreateProxyRequest {
-	return CreateProxyRequest{
-		DeviceAddress: deviceAddress,
-		DeviceType:    deviceType,
-		HostIP:        apiContracts.CONNECTION_IP_LATCHING,
-		Wait:          apiContracts.PROXY_CREATE_WAIT,
-		Isolate:       apiContracts.PROXY_CREATE_ISOLATE,
-		Concurrent:    apiContracts.PROXY_CREATE_CONCURRENT,
-		ProxyType:     "port",
-	}
+	//
+	// Ignore for now
+	//
+	// Wait         bool   `json:"wait,omitempty"`         // tells the API to not return until the connection is made or times out
+	// ConnectionID string `json:"connectionid,omitempty"` // "118EB6E7-1BA5-0AA0-B80E-7D15B9059260"
 }
 
 //
@@ -111,45 +83,29 @@ type ProxyConnectionInfo struct {
 	// RequestedAt        string `json:"requestedAt,omitempty"`        // "2021-01-15T23:20:00+00:00"
 }
 
-// CreateProxyResponse -
-type CreateProxyResponse struct {
-	Status     string              `json:"status"`     // "true"
-	Reason     string              `json:"reason"`     // "..."
-	Connection ProxyConnectionInfo `json:"connection"` //
-
-	//
-	// Ignore for now
-	//
-	// Wait         bool   `json:"wait,omitempty"`         // tells the API to not return until the connection is made or times out
-	// ConnectionID string `json:"connectionid,omitempty"` // "118EB6E7-1BA5-0AA0-B80E-7D15B9059260"
+type DeleteProxyResponse struct {
+	Status string `json:"status"` // "true"
 }
 
-// CreateProxy - creates a REMOTEIT proxy
-func (c *Client) CreateProxy(request CreateProxyRequest) (CreateProxyResponse, errorx.Error) {
-	body, err := json.Marshal(request)
-	if err != nil {
-		return CreateProxyResponse{}, apiContracts.ErrAPI_ProxyCreate_CantPrepRequest
-	}
+type DeleteProxyRequest struct {
+	DeviceAddress string `json:"deviceaddress,omitempty"` // "80:00:00:00:01:00:40:C4"
+	ConnectionID  string `json:"connectionid,omitempty"`  // "118EB6E7-1BA5-0AA0-B80E-7D15B9059260"
+}
 
-	raw, err := c.Post("/device/connect", body)
-	if err != nil {
-		return CreateProxyResponse{}, apiContracts.ErrAPI_ProxyCreate_CantSendRequest
-	}
-
-	var response CreateProxyResponse
-	if err := json.Unmarshal(raw, &response); err != nil {
-		return CreateProxyResponse{}, apiContracts.ErrAPI_ProxyCreate_CantReadResponse
-	}
-
-	if response.Status != apiContracts.API_ERROR_CODE_STATUS_TRUE {
-		if strings.Contains(response.Reason, apiContracts.API_ERROR_CODE_REASON_SERVICE_NOT_FOUND_FOR_UID) {
-			return CreateProxyResponse{}, apiContracts.ErrAPI_ProxyCreate_NoServiceFound
-		}
-		if !(len(strings.TrimSpace(response.Reason)) <= 0) {
-			return CreateProxyResponse{}, errorx.New(apiContracts.ErrAPI_ProxyCreate_Generic, response.Reason)
-		}
-		return CreateProxyResponse{}, apiContracts.ErrAPI_ProxyCreate_Unknown
-	}
-
-	return response, nil
+//
+// SAMPLE
+// curl 'https://api.remot3.it/apv/v27/device/connect/'
+// -H 'developerKey: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+// -H 'token: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+// -H 'Accept-Language: en-US,en;q=0.9'
+// --data-binary '{"deviceaddress":"80:00:00:00:01:00:40:C4","devicetype":28,"hostip":"255.255.255.255","wait":"true","isolate":"domain=app.remote.it"}'
+//
+type CreateProxyRequest struct {
+	DeviceAddress string `json:"deviceaddress,omitempty"` // "80:00:00:00:01:00:40:C4"
+	DeviceType    int    `json:"devicetype,omitempty"`    // 28
+	HostIP        string `json:"hostip,omitempty"`        // "255.255.255.255"
+	Wait          string `json:"wait,omitempty"`          // "true"
+	Isolate       string `json:"isolate,omitempty"`       // "domain=app.remote.it"
+	Concurrent    bool   `json:"concurrent,omitempty"`    // FIXME: will this be remvoed in the future ?
+	ProxyType     string `json:"proxyType,omitempty"`     // proxyType=port
 }

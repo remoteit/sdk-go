@@ -45,3 +45,15 @@ func (s Service) String() string {
 
 	return string(data)
 }
+
+type ServiceRegistrationInfo struct {
+	Name             string
+	ServiceType      string
+	ServiceTypeAsInt int
+	HardwareID       string
+}
+
+type DefinedService struct {
+	ID   string `json:"id,omitempty"`
+	Name string `json:"name,omitempty"`
+}

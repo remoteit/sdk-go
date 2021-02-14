@@ -1,10 +1,8 @@
 package api
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"sync"
@@ -14,88 +12,36 @@ import (
 	errorx "github.com/remoteit/systemkit-errorx"
 )
 
-type GraphQLClient struct {
-	endpointURL    string
-	client         *http.Client
-	productVersion string
-	os             string
-	osVersion      string
-	skipQuery      bool
-}
-
-func NewGraphQLClient(
-	gqlURL string, apiTimeout time.Duration,
-	productVersion string, os string, osVersion string,
-	skipQuery bool,
-) *GraphQLClient {
-	return &GraphQLClient{
-		endpointURL: gqlURL,
-		client: &http.Client{
-			Timeout: apiTimeout,
-		},
-		productVersion: productVersion,
-		os:             os,
-		osVersion:      osVersion,
-		skipQuery:      skipQuery,
-	}
-}
-
-func (thisRef GraphQLClient) RunGraphQL(query string, authToken string) ([]byte, errorx.Error) {
-	return thisRef.runGraphQLHelper(query, authToken)
-}
-
-func (thisRef GraphQLClient) runGraphQLHelper(query string, token string) ([]byte, errorx.Error) {
-
-	if thisRef.skipQuery {
-		return []byte{}, nil
-	}
-
-	type gqlReuqest struct {
-		Query string `json:"query"`
-	}
-
-	request := gqlReuqest{Query: query}
-	requestAsBytes, err := json.Marshal(request)
-	if err != nil {
-		return []byte{}, apiContracts.ErrAPI_GQL_CantPrepRequest
-	}
-
-	trimmedRequest := string(requestAsBytes)
-	trimmedRequest = strings.ReplaceAll(trimmedRequest, "\t", "")
-	trimmedRequest = strings.ReplaceAll(trimmedRequest, "\n", "")
-
-	requestAsBytes = []byte(requestAsBytes)
-
-	req, err := http.NewRequest("POST", thisRef.endpointURL, bytes.NewBuffer(requestAsBytes))
-	if err != nil {
-		return nil, apiContracts.ErrAPI_GQL_CantPrepRequest
-	}
-
-	req.Header.Set("User-Agent", fmt.Sprintf("cli-%s-%s-%s", thisRef.productVersion, thisRef.os, thisRef.osVersion))
-	req.Header.Add("token", token)
-
-	resp, err := thisRef.client.Do(req)
-	if err != nil {
-		return nil, apiContracts.ErrAPI_GQL_CantSendRequest
-	}
-
-	defer resp.Body.Close()
-
-	raw, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, apiContracts.ErrAPI_GQL_CantReadResponse
-	}
-
-	return raw, nil
-}
-
-var cachedApplicationTypes *[]apiContracts.ApplicationType
+var cachedApplicationTypes []apiContracts.ApplicationType
 var cachedApplicationTypesCreateTime = time.Time{}
 var cachedApplicationTypesMutex sync.Mutex
 
 const cachedApplicationTypesExpireDuration = 10 * time.Hour
 
-func (thisRef GraphQLClient) GetApplicationTypes(authToken string) (*[]apiContracts.ApplicationType, errorx.Error) {
+type GraphQLClient interface {
+	GetApplicationTypes() ([]apiContracts.ApplicationType, errorx.Error)
+	GetApplicationType(serviceID string) (int, errorx.Error)
+	GetDeviceAndServiceNames(deviceID string) (apiContracts.DefinedDevice, errorx.Error)
+	GetServiceNamesByIDs(serviceIDs []string) ([]apiContracts.DefinedService, errorx.Error)
+}
+
+func NewGraphQLClient(apiURL string, apiToken string, apiTimeout time.Duration, userAgent string) GraphQLClient {
+	return &graphQLClient{
+		apiURL:     apiURL,
+		apiToken:   apiToken,
+		apiTimeout: apiTimeout,
+		userAgent:  userAgent,
+	}
+}
+
+type graphQLClient struct {
+	apiURL     string
+	apiToken   string
+	apiTimeout time.Duration
+	userAgent  string
+}
+
+func (thisRef graphQLClient) GetApplicationTypes() ([]apiContracts.ApplicationType, errorx.Error) {
 	// 0. check for cached
 	cachedApplicationTypesMutex.Lock()
 	defer cachedApplicationTypesMutex.Unlock()
@@ -106,7 +52,7 @@ func (thisRef GraphQLClient) GetApplicationTypes(authToken string) (*[]apiContra
 	}
 
 	// 1. run
-	raw, err := thisRef.RunGraphQL(`{
+	raw, err := thisRef.prepAndDoHTTPRequest(`{
 		applicationTypes {
 			id
 			name
@@ -115,15 +61,15 @@ func (thisRef GraphQLClient) GetApplicationTypes(authToken string) (*[]apiContra
 			proxy
 			protocol
 		}
-	}`, authToken)
+	}`)
 	if err != nil {
-		return &[]apiContracts.ApplicationType{}, err
+		return []apiContracts.ApplicationType{}, err
 	}
 
 	// 2. read
 	rawAsString := string(raw)
 	if strings.TrimSpace(rawAsString) == "Unauthorized" {
-		return &[]apiContracts.ApplicationType{}, apiContracts.ErrAPI_GQL_NotAuthorized
+		return []apiContracts.ApplicationType{}, apiContracts.ErrAPI_GQL_NotAuthorized
 	}
 
 	type gqlReply struct {
@@ -134,30 +80,30 @@ func (thisRef GraphQLClient) GetApplicationTypes(authToken string) (*[]apiContra
 
 	var response gqlReply
 	if err := json.Unmarshal(raw, &response); err != nil {
-		return &[]apiContracts.ApplicationType{}, apiContracts.ErrAPI_GQL_CantReadResponse
+		return []apiContracts.ApplicationType{}, apiContracts.ErrAPI_GQL_CantReadResponse
 	}
 
 	// 3. update cached
-	cachedApplicationTypes = &response.Data.ApplicationTypes
+	cachedApplicationTypes = response.Data.ApplicationTypes
 	cachedApplicationTypesCreateTime = time.Now()
 
 	return cachedApplicationTypes, nil
 }
 
-func (thisRef GraphQLClient) GetApplicationType(serviceID string, authToken string) (int, errorx.Error) {
+func (thisRef graphQLClient) GetApplicationType(serviceID string) (int, errorx.Error) {
 	serviceID = strings.TrimSpace(serviceID)
 	if len(serviceID) == 0 {
 		return apiContracts.InvalidApplicationType, nil
 	}
 
 	// 1. run
-	raw, err := thisRef.RunGraphQL(fmt.Sprintf(`{
+	raw, err := thisRef.prepAndDoHTTPRequest(fmt.Sprintf(`{
 		login {
 			service(id: "%s") {
 			  application
 			}
 		}
-	}`, serviceID), authToken)
+	}`, serviceID))
 	if err != nil {
 		return apiContracts.InvalidApplicationType, err
 	}
@@ -186,14 +132,14 @@ func (thisRef GraphQLClient) GetApplicationType(serviceID string, authToken stri
 	return apiContracts.InvalidApplicationType, nil
 }
 
-func (thisRef GraphQLClient) GetDeviceAndServiceNames(deviceID string, authToken string) (apiContracts.DefinedDevice, errorx.Error) {
+func (thisRef graphQLClient) GetDeviceAndServiceNames(deviceID string) (apiContracts.DefinedDevice, errorx.Error) {
 	deviceID = strings.TrimSpace(deviceID)
 	if len(deviceID) == 0 {
 		return apiContracts.DefinedDevice{}, nil
 	}
 
 	// 1. run
-	raw, err := thisRef.RunGraphQL(fmt.Sprintf(`{
+	raw, err := thisRef.prepAndDoHTTPRequest(fmt.Sprintf(`{
 		login {
 			device(id: "%s") {
 				id
@@ -204,7 +150,7 @@ func (thisRef GraphQLClient) GetDeviceAndServiceNames(deviceID string, authToken
 				}
 			}
 		}
-	}`, deviceID), authToken)
+	}`, deviceID))
 	if err != nil {
 		return apiContracts.DefinedDevice{}, err
 	}
@@ -243,7 +189,7 @@ func (thisRef GraphQLClient) GetDeviceAndServiceNames(deviceID string, authToken
 	return apiContracts.DefinedDevice{}, nil
 }
 
-func (thisRef GraphQLClient) GetServiceNamesByIDs(serviceIDs []string, authToken string) ([]apiContracts.DefinedService, errorx.Error) {
+func (thisRef graphQLClient) GetServiceNamesByIDs(serviceIDs []string) ([]apiContracts.DefinedService, errorx.Error) {
 	// 1. run
 	updatedServiceIDs := []string{}
 	for _, serviceID := range serviceIDs {
@@ -259,14 +205,14 @@ func (thisRef GraphQLClient) GetServiceNamesByIDs(serviceIDs []string, authToken
 		return []apiContracts.DefinedService{}, nil
 	}
 
-	raw, err := thisRef.RunGraphQL(fmt.Sprintf(`{
+	raw, err := thisRef.prepAndDoHTTPRequest(fmt.Sprintf(`{
 		login {
 			service(id: [%s]) {
 				id
 				name
 			}
 		}
-	}`, strings.Join(updatedServiceIDs, ", ")), authToken)
+	}`, strings.Join(updatedServiceIDs, ", ")))
 	if err != nil {
 		return []apiContracts.DefinedService{}, err
 	}
@@ -297,4 +243,28 @@ func (thisRef GraphQLClient) GetServiceNamesByIDs(serviceIDs []string, authToken
 	}
 
 	return definedServices, nil
+}
+
+func (thisRef graphQLClient) prepAndDoHTTPRequest(query string) ([]byte, errorx.Error) {
+	type gqlReuqest struct {
+		Query string `json:"query"`
+	}
+
+	request := gqlReuqest{Query: query}
+	payload, err := json.Marshal(request)
+	if err != nil {
+		return []byte{}, apiContracts.ErrAPI_GQL_CantPrepRequest
+	}
+
+	headers := map[string]string{
+		"User-Agent": thisRef.userAgent,
+		"token":      thisRef.apiToken,
+	}
+
+	_, data, err := doHTTPRequest(http.MethodPost, headers, thisRef.apiURL, payload, thisRef.apiTimeout)
+	if err != nil {
+		return nil, apiContracts.ErrAPI_GQL_Error
+	}
+
+	return data, nil
 }

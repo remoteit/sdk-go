@@ -9,13 +9,21 @@ import (
 	errorx "github.com/remoteit/systemkit-errorx"
 )
 
-// CreateDevice -
-func (c *Client) CreateDevice(username string, password string) (apiContracts.Service, errorx.Error) {
-	return apiContracts.Service{}, nil
+type Device interface {
+	Unregister(uid string) errorx.Error
+	Transfer(uid string, destinationAccount string) errorx.Error
+	ListAll() (apiContracts.DeviceListAllResponse, errorx.Error)
 }
 
-// UnregisterDevice -
-func (c *Client) UnregisterDevice(uid string) errorx.Error {
+func NewDevice(apiClient Client) Device {
+	return &device{}
+}
+
+type device struct {
+	apiClient Client
+}
+
+func (thisRef device) Unregister(uid string) errorx.Error {
 	type request struct{}
 	data := request{}
 	body, err := json.Marshal(data)
@@ -23,7 +31,7 @@ func (c *Client) UnregisterDevice(uid string) errorx.Error {
 		return apiContracts.ErrAPI_Device_CantPrepRequest
 	}
 
-	raw, err := c.Post(fmt.Sprintf("/developer/device/delete/registered/%s", uid), body)
+	raw, err := thisRef.apiClient.Post(fmt.Sprintf("/developer/device/delete/registered/%s", uid), body)
 	if err != nil {
 		return apiContracts.ErrAPI_Device_CantSendRequest
 	}
@@ -52,7 +60,7 @@ func (c *Client) UnregisterDevice(uid string) errorx.Error {
 	return nil
 }
 
-func (c *Client) TransferDevice(uid string, destinationAccount string) errorx.Error {
+func (thisRef device) Transfer(uid string, destinationAccount string) errorx.Error {
 	type request struct {
 		User string `json:"user"`
 	}
@@ -64,7 +72,7 @@ func (c *Client) TransferDevice(uid string, destinationAccount string) errorx.Er
 		return apiContracts.ErrAPI_Device_CantPrepRequest
 	}
 
-	raw, err := c.Post(fmt.Sprintf("/developer/devices/transfer/%s", uid), body)
+	raw, err := thisRef.apiClient.Post(fmt.Sprintf("/developer/devices/transfer/%s", uid), body)
 	if err != nil {
 		return apiContracts.ErrAPI_Device_CantSendRequest
 	}
@@ -87,4 +95,22 @@ func (c *Client) TransferDevice(uid string, destinationAccount string) errorx.Er
 	}
 
 	return nil
+}
+
+func (thisRef device) ListAll() (apiContracts.DeviceListAllResponse, errorx.Error) {
+	raw, err := thisRef.apiClient.Get("/device/list/all?cache=false")
+	if err != nil {
+		return apiContracts.DeviceListAllResponse{}, apiContracts.ErrAPI_DeviceList_CantSendRequest
+	}
+
+	var response apiContracts.DeviceListAllResponse
+	if err := json.Unmarshal(raw, &response); err != nil {
+		return apiContracts.DeviceListAllResponse{}, apiContracts.ErrAPI_DeviceList_CantReadResponse
+	}
+
+	if response.Status != apiContracts.API_ERROR_CODE_STATUS_TRUE {
+		return apiContracts.DeviceListAllResponse{}, errorx.New(apiContracts.ErrAPI_DeviceList_Generic, response.Reason)
+	}
+
+	return response, nil
 }

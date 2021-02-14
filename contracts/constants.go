@@ -3,15 +3,21 @@ package contracts
 import "time"
 
 const (
-	CONNECTION_IP_LATCHING      = "255.255.255.255" // connection allowed to first connected, refuse others
-	PROXY_CREATE_WAIT           = "true"
-	PROXY_CREATE_ISOLATE        = "domain=app.remote.it"  // FIXME:  for now this is like this, but in portal it is taken from browser URL
-	PROXY_CREATE_CONCURRENT     = true                    // INFO: pass this JSON flag to API to enable concurrent proxies, FIXME: will this be remvoed in the future ?
-	ONLINE_CHECK_ENDPOINT       = "https://api.remot3.it" //
-	ONLINE_CHECK_ENDPOINT_REPLY = "api.remot3.it"
-	API_TIMEOUT                 = 40 * time.Second
+	DEFAULT_API_URL         = "https://api.remot3.it/apv/v27"
+	DEFAULT_API_GRAPHQL_URL = "https://api.remote.it/graphql/v1"
+	DEFAULT_API_RESTORE_URL = "https://install.remote.it/v1/restore"
+	DEFAULT_API_TIMEOUT     = 40 * time.Second
+	DEFAULT_API_USER_AGENT  = "remot3.it-sdk-go"
 
-	// These are here for two reasons
+	DEFAULT_PROXY_CREATE_IP_LATCHING = "255.255.255.255"
+	DEFAULT_PROXY_CREATE_WAIT        = "true"
+	DEFAULT_PROXY_CREATE_ISOLATE     = "domain=app.remote.it"
+	DEFAULT_PROXY_CREATE_CONCURRENT  = true
+
+	DEFAULT_ONLINE_CHECK_ENDPOINT       = "https://api.remot3.it"
+	DEFAULT_ONLINE_CHECK_ENDPOINT_REPLY = "api.remot3.it"
+
+	// FIXME:
 	// 1 - error code is a string with no standard
 	// 2 - is part of the `resp.Reason` instead of `resp.Error`,
 	//     `resp.Reason` must be a human readable form of the `resp.Error`

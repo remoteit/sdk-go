@@ -87,10 +87,12 @@ var (
 	ErrAPI_Client_CantCreateRequest = errorx.New(5001, "API Client - Error creating request")
 	ErrAPI_Client_CantSend          = errorx.New(5002, "API Client - Error sending request")
 	ErrAPI_Client_CantRead          = errorx.New(5003, "API Client - Error reading request")
+	ErrAPI_Client_Error             = errorx.New(5003, "API Client - Error communicating")
 
 	ErrAPI_GQL_Generic          = 6000
 	ErrAPI_GQL_CantPrepRequest  = errorx.New(6001, "GQL Client - Error creating request")
 	ErrAPI_GQL_CantSendRequest  = errorx.New(6002, "GQL Client - Error sending request")
 	ErrAPI_GQL_CantReadResponse = errorx.New(6003, "GQL Client - Error read response")
 	ErrAPI_GQL_NotAuthorized    = errorx.New(6004, "GQL Client - Not authorized")
+	ErrAPI_GQL_Error            = errorx.New(5003, "GQL Client - Error communicating")
 )

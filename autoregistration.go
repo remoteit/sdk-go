@@ -5,11 +5,27 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	apiContracts "github.com/remoteit/sdk-go/contracts"
 	errorx "github.com/remoteit/systemkit-errorx"
 )
+
+type AutoRegistration interface {
+	SendDeviceInfo(registrationKey string, hardwareID string, cpuID string, macAddress string, version string, platformOSName string) errorx.Error
+	GetProductTemplate(registrationKey string, deviceUniquID string) ([]string, bool, errorx.Error)
+	GetServiceConfigFromTemplateID(serviceID string, hardwareID string) (apiContracts.ServiceConfigResponse, errorx.Error)
+	RegisterService(serviceID string, uniqueDeviceID string, registrationKey string) (apiContracts.ServiceCredentials, bool, errorx.Error)
+}
+
+func NewAutoRegistration(apiClient Client) AutoRegistration {
+	return &autoRegistration{
+		apiClient: apiClient,
+	}
+}
+
+type autoRegistration struct {
+	apiClient Client
+}
 
 // X ->	?????????????																		-> SendDeviceInfo
 // X -> ProjectListURL				="/bulk/registration/device/friendly/configuration"		-> ListServiceIDs
@@ -20,13 +36,7 @@ import (
 // - -> ProvisionGet				="/project/provisioning"
 // - -> ProvisionDownloadDirect		="/project/provisioning/download"
 
-func SendDeviceInfo(registrationKey string, hardwareID string, cpuID string, macAddress string, version string,
-	apiURL string, apiKey string, apiTimeout time.Duration,
-	productVersion string, os string, osVersion string,
-	platformOSName string) errorx.Error {
-
-	apiClient := NewClient(apiURL, apiKey, apiTimeout, productVersion, os, osVersion)
-
+func (thisRef autoRegistration) SendDeviceInfo(registrationKey string, hardwareID string, cpuID string, macAddress string, version string, platformOSName string) errorx.Error {
 	var url = "/bulk/registration/device/information/"
 
 	type deviceInfoRequest struct {
@@ -55,7 +65,7 @@ func SendDeviceInfo(registrationKey string, hardwareID string, cpuID string, mac
 		return apiContracts.ErrAutoreg_CantPrepRequest
 	}
 
-	raw, err := apiClient.Post(url, body)
+	raw, err := thisRef.apiClient.Post(url, body)
 	if err != nil {
 		return apiContracts.ErrAutoreg_CantSendRequest
 	}
@@ -82,16 +92,10 @@ func SendDeviceInfo(registrationKey string, hardwareID string, cpuID string, mac
 	return nil
 }
 
-// GetProductTemplate -
-func GetProductTemplate(registrationKey string, deviceUniquID string,
-	apiURL string, apiKey string, apiTimeout time.Duration,
-	productVersion string, os string, osVersion string) ([]string, bool, errorx.Error) {
-
-	apiClient := NewClient(apiURL, apiKey, apiTimeout, productVersion, os, osVersion)
-
+func (thisRef autoRegistration) GetProductTemplate(registrationKey string, deviceUniquID string) ([]string, bool, errorx.Error) {
 	var url = fmt.Sprintf("/bulk/registration/device/friendly/configuration/%s/%s/", registrationKey, deviceUniquID)
 
-	raw, errx := apiClient.Get(url)
+	raw, errx := thisRef.apiClient.Get(url)
 	if errx != nil {
 		return nil, false, errx
 	}
@@ -118,18 +122,13 @@ func GetProductTemplate(registrationKey string, deviceUniquID string,
 	return strings.Split(resp.Projects, ","), false, nil
 }
 
-// GetServiceConfigFromTemplateID -
-func GetServiceConfigFromTemplateID(serviceID string, hardwareID string,
-	apiURL string, apiKey string, apiTimeout time.Duration,
-	productVersion string, os string, osVersion string) (*ServiceConfigResponse, errorx.Error) {
-
-	apiClient := NewClient(apiURL, apiKey, apiTimeout, productVersion, os, osVersion)
+func (thisRef autoRegistration) GetServiceConfigFromTemplateID(serviceID string, hardwareID string) (apiContracts.ServiceConfigResponse, errorx.Error) {
 
 	var url = fmt.Sprintf("/bulk/registration/configuration/%s/%s/", serviceID, hardwareID)
 
-	raw, errx := apiClient.Get(url)
+	raw, errx := thisRef.apiClient.Get(url)
 	if errx != nil {
-		return nil, errx
+		return apiContracts.ServiceConfigResponse{}, errx
 	}
 
 	type serviceConfigResponse struct {
@@ -145,7 +144,7 @@ func GetServiceConfigFromTemplateID(serviceID string, hardwareID string,
 	var resp serviceConfigResponse
 	err := json.Unmarshal(raw, &resp)
 	if err != nil {
-		return nil, apiContracts.ErrAutoreg_CantPrepRequest
+		return apiContracts.ServiceConfigResponse{}, apiContracts.ErrAutoreg_CantPrepRequest
 	}
 
 	port, err := strconv.Atoi(resp.ContentPort)
@@ -162,10 +161,10 @@ func GetServiceConfigFromTemplateID(serviceID string, hardwareID string,
 	}
 
 	if err != nil {
-		return nil, apiContracts.ErrAutoreg_CantConvertPort
+		return apiContracts.ServiceConfigResponse{}, apiContracts.ErrAutoreg_CantConvertPort
 	}
 
-	return &ServiceConfigResponse{
+	return apiContracts.ServiceConfigResponse{
 		Hostname: resp.ContentIP,
 		Port:     port,
 		Type:     serviceType,
@@ -173,20 +172,7 @@ func GetServiceConfigFromTemplateID(serviceID string, hardwareID string,
 	}, nil
 }
 
-// ServiceConfigResponse -
-type ServiceConfigResponse struct {
-	Hostname string
-	Port     int
-	Type     int
-	Disabled bool
-}
-
-// RegisterService -
-func RegisterService(serviceID string, uniqueDeviceID string, registrationKey string,
-	apiURL string, apiKey string, apiTimeout time.Duration,
-	productVersion string, os string, osVersion string) (*ServiceCredentials, bool, errorx.Error) {
-
-	apiClient := NewClient(apiURL, apiKey, apiTimeout, productVersion, os, osVersion)
+func (thisRef autoRegistration) RegisterService(serviceID string, uniqueDeviceID string, registrationKey string) (apiContracts.ServiceCredentials, bool, errorx.Error) {
 
 	var url = "/bulk/registration/register"
 
@@ -203,12 +189,12 @@ func RegisterService(serviceID string, uniqueDeviceID string, registrationKey st
 	}
 	body, err := json.Marshal(req)
 	if err != nil {
-		return nil, false, apiContracts.ErrAutoreg_CantPrepRequest
+		return apiContracts.ServiceCredentials{}, false, apiContracts.ErrAutoreg_CantPrepRequest
 	}
 
-	raw, errx := apiClient.Post(url, body)
+	raw, errx := thisRef.apiClient.Post(url, body)
 	if errx != nil {
-		return nil, false, errx
+		return apiContracts.ServiceCredentials{}, false, errx
 	}
 
 	type deviceRegistrationResponse struct {
@@ -222,24 +208,18 @@ func RegisterService(serviceID string, uniqueDeviceID string, registrationKey st
 	var resp deviceRegistrationResponse
 	err = json.Unmarshal(raw, &resp)
 	if err != nil {
-		return nil, false, apiContracts.ErrAutoreg_CantReadResponse
+		return apiContracts.ServiceCredentials{}, false, apiContracts.ErrAutoreg_CantReadResponse
 	}
 
 	if resp.Status == apiContracts.API_ERROR_CODE_STATUS_FALSE {
-		return nil, false, errorx.New(apiContracts.ErrAPI_AutoReg_Generic, resp.Reason)
+		return apiContracts.ServiceCredentials{}, false, errorx.New(apiContracts.ErrAPI_AutoReg_Generic, resp.Reason)
 	}
 	if resp.Status == apiContracts.API_ERROR_CODE_STATUS_PENDING {
-		return nil, true, nil
+		return apiContracts.ServiceCredentials{}, true, nil
 	}
 
-	return &ServiceCredentials{
+	return apiContracts.ServiceCredentials{
 		UID:    resp.UID,
 		Secret: resp.Secret,
 	}, false, nil
-}
-
-// ServiceCredentials -
-type ServiceCredentials struct {
-	UID    string `json:"uid"`
-	Secret string `json:"secret"`
 }

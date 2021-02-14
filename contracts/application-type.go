@@ -32,17 +32,6 @@ const (
 	MultiPortServiceID int = 40
 )
 
-type DefinedDevice struct {
-	ID       string           `json:"id,omitempty"`
-	Name     string           `json:"name,omitempty"`
-	Services []DefinedService `json:"services,omitempty"`
-}
-
-type DefinedService struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
-}
-
 const DefaultServiceType = "00:00:00:00:00:01:00:00:04:60:00:00"
 
 func GetServiceType(deviceType string, applicationType int, manufacturer int, platform int) string {
