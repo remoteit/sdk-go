@@ -35,7 +35,6 @@ func NewClient(apiURL string, apiKey string, apiTimeout time.Duration, userAgent
 	return &client{
 		apiURL:     apiURL,
 		apiKey:     apiKey,
-		apiToken:   "",
 		apiTimeout: apiTimeout,
 		userAgent:  userAgent,
 	}
@@ -44,7 +43,6 @@ func NewClient(apiURL string, apiKey string, apiTimeout time.Duration, userAgent
 type client struct {
 	apiURL     string
 	apiKey     string
-	apiToken   string
 	apiTimeout time.Duration
 	userAgent  string
 }
@@ -133,8 +131,6 @@ func (thisRef client) LoginWithAuthHash(username string, authHash string) (apiCo
 
 	if !cachedAuthResponseCreateTime.IsZero() &&
 		time.Since(cachedAuthResponseCreateTime) < cachedAuthResponseExpireDuration {
-
-		thisRef.apiToken = cachedAuthResponse.Token
 		return cachedAuthResponse, nil
 	}
 
@@ -183,6 +179,9 @@ func (thisRef client) LoginWithAuthHashIgnoreCache(username string, authHash str
 		return apiContracts.Authentication{}, apiContracts.ErrAPI_Auth_NoToken
 	}
 
+	cachedAuthResponseMutex.Lock()
+	defer cachedAuthResponseMutex.Unlock()
+
 	cachedAuthResponse = apiContracts.Authentication{
 		AuthHash: response.ServiceAuthHash,
 		User:     username,
@@ -190,9 +189,6 @@ func (thisRef client) LoginWithAuthHashIgnoreCache(username string, authHash str
 		Token:    response.Token,
 	}
 	cachedAuthResponseCreateTime = time.Now()
-
-	thisRef.apiToken = cachedAuthResponse.Token
-
 	return cachedAuthResponse, nil
 }
 
@@ -213,9 +209,12 @@ func (thisRef client) prepAndDoHTTPRequest(method string, endpointURL string, pa
 		"User-Agent": thisRef.userAgent,
 		"apikey":     thisRef.apiKey,
 	}
-	if thisRef.apiToken != "" {
-		headers["token"] = thisRef.apiToken
+
+	cachedAuthResponseMutex.Lock()
+	if cachedAuthResponse.Token != "" {
+		headers["token"] = cachedAuthResponse.Token
 	}
+	cachedAuthResponseMutex.Unlock()
 
 	_, data, err := doHTTPRequest(method, headers, thisRef.apiURL+endpointURL, payload, thisRef.apiTimeout)
 	if err != nil {

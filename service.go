@@ -15,7 +15,7 @@ type Service interface {
 	GenerateUID(projectKey string, projectSecret string) (uid string, err errorx.Error)
 	Register(name string, uid string, hardwareID string, serviceType string, serviceTypeAsInt int) (secret string, err errorx.Error)
 
-	CreateFullService(info apiContracts.ServiceRegistrationInfo, projectKey string, projectSecret string) (*apiContracts.Service, errorx.Error)
+	CreateFullService(info apiContracts.ServiceRegistrationInfo, projectKey string, projectSecret string) (apiContracts.Service, errorx.Error)
 }
 
 func NewService(apiClient Client) Service {
@@ -236,17 +236,15 @@ func (thisRef service) Register(name string, uid string, hardwareID string, serv
 	return strings.Replace(resp.Secret, ":", "", -1), nil
 }
 
-func (thisRef service) CreateFullService(info apiContracts.ServiceRegistrationInfo, projectKey string, projectSecret string) (*apiContracts.Service, errorx.Error) {
-	empty := new(apiContracts.Service)
-
+func (thisRef service) CreateFullService(info apiContracts.ServiceRegistrationInfo, projectKey string, projectSecret string) (apiContracts.Service, errorx.Error) {
 	uid, err := thisRef.GenerateUID(projectKey, projectSecret)
 	if err != nil {
-		return empty, err
+		return apiContracts.Service{}, err
 	}
 
 	err = thisRef.Create(uid, info.ServiceType)
 	if err != nil {
-		return empty, err
+		return apiContracts.Service{}, err
 	}
 
 	hardwareID := uid
@@ -255,7 +253,7 @@ func (thisRef service) CreateFullService(info apiContracts.ServiceRegistrationIn
 	}
 	secret, err := thisRef.Register(info.Name, uid, hardwareID, info.ServiceType, info.ServiceTypeAsInt)
 	if err != nil {
-		return empty, err
+		return apiContracts.Service{}, err
 	}
 
 	overload := 0
@@ -263,7 +261,7 @@ func (thisRef service) CreateFullService(info apiContracts.ServiceRegistrationIn
 		overload = apiContracts.MultiPortServiceID
 	}
 
-	return &apiContracts.Service{
+	return apiContracts.Service{
 		HardwareID: hardwareID,
 		Overload:   overload,
 		Secret:     secret,

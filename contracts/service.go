@@ -33,7 +33,7 @@ type Service struct {
 	ManufactureID    int    `json:"manufactureid"`
 }
 
-func (s *Service) IsMultiPort() bool {
+func (s Service) IsMultiPort() bool {
 	return s.Type == MultiPortServiceID || s.Overload == MultiPortServiceID
 }
 
