@@ -16,7 +16,9 @@ type Device interface {
 }
 
 func NewDevice(apiClient Client) Device {
-	return &device{}
+	return &device{
+		apiClient: apiClient,
+	}
 }
 
 type device struct {
