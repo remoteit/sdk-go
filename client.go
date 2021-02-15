@@ -127,12 +127,12 @@ func (thisRef client) LoginWithPassword(username string, password string) (apiCo
 func (thisRef client) LoginWithAuthHash(username string, authHash string) (apiContracts.Authentication, errorx.Error) {
 
 	cachedAuthResponseMutex.Lock()
-	defer cachedAuthResponseMutex.Unlock()
 
-	if !cachedAuthResponseCreateTime.IsZero() &&
-		time.Since(cachedAuthResponseCreateTime) < cachedAuthResponseExpireDuration {
+	if !cachedAuthResponseCreateTime.IsZero() && time.Since(cachedAuthResponseCreateTime) < cachedAuthResponseExpireDuration {
+		cachedAuthResponseMutex.Unlock()
 		return cachedAuthResponse, nil
 	}
+	cachedAuthResponseMutex.Unlock()
 
 	return thisRef.LoginWithAuthHashIgnoreCache(username, authHash)
 }
