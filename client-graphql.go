@@ -20,6 +20,8 @@ const cachedApplicationTypesExpireDuration = 10 * time.Hour
 
 type GraphQLClient interface {
 	GetApplicationTypes() ([]apiContracts.ApplicationType, errorx.Error)
+	GetApplicationTypesIgnoreCache() ([]apiContracts.ApplicationType, errorx.Error)
+
 	GetApplicationType(serviceID string) (int, errorx.Error)
 	GetDeviceAndServiceNames(deviceID string) (apiContracts.DefinedDevice, errorx.Error)
 	GetServiceNamesByIDs(serviceIDs []string) ([]apiContracts.DefinedService, errorx.Error)
@@ -42,15 +44,18 @@ type graphQLClient struct {
 }
 
 func (thisRef graphQLClient) GetApplicationTypes() ([]apiContracts.ApplicationType, errorx.Error) {
-	// 0. check for cached
 	cachedApplicationTypesMutex.Lock()
-	defer cachedApplicationTypesMutex.Unlock()
 
-	if !cachedApplicationTypesCreateTime.IsZero() &&
-		time.Since(cachedApplicationTypesCreateTime) < cachedApplicationTypesExpireDuration {
+	if !cachedApplicationTypesCreateTime.IsZero() && time.Since(cachedApplicationTypesCreateTime) < cachedApplicationTypesExpireDuration {
+		cachedApplicationTypesMutex.Unlock()
 		return cachedApplicationTypes, nil
 	}
+	cachedApplicationTypesMutex.Unlock()
 
+	return thisRef.GetApplicationTypesIgnoreCache()
+}
+
+func (thisRef graphQLClient) GetApplicationTypesIgnoreCache() ([]apiContracts.ApplicationType, errorx.Error) {
 	// 1. run
 	raw, err := thisRef.prepAndDoHTTPRequest(`{
 		applicationTypes {
@@ -84,6 +89,9 @@ func (thisRef graphQLClient) GetApplicationTypes() ([]apiContracts.ApplicationTy
 	}
 
 	// 3. update cached
+	cachedApplicationTypesMutex.Lock()
+	defer cachedApplicationTypesMutex.Unlock()
+
 	cachedApplicationTypes = response.Data.ApplicationTypes
 	cachedApplicationTypesCreateTime = time.Now()
 

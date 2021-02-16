@@ -125,7 +125,6 @@ func (thisRef client) LoginWithPassword(username string, password string) (apiCo
 }
 
 func (thisRef client) LoginWithAuthHash(username string, authHash string) (apiContracts.Authentication, errorx.Error) {
-
 	cachedAuthResponseMutex.Lock()
 
 	if !cachedAuthResponseCreateTime.IsZero() && time.Since(cachedAuthResponseCreateTime) < cachedAuthResponseExpireDuration {
