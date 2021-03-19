@@ -59,13 +59,14 @@ type ProxyConnectionInfo struct {
 	ProxyServer string `json:"proxyserver,omitempty"` // "proxy40.rt3.io"
 	ProxyPort   string `json:"proxyport,omitempty"`   // "34168"
 
+	Proxy           string `json:"proxy,omitempty"`           // "http://proxy40.rt3.io:34168"
+	ProxyServerPort int    `json:"proxyServerPort,omitempty"` // 34168
+	ProxyURL        string `json:"proxyURL,omitempty"`        // "proxy40.rt3.io:34168"
+	ReverseProxy    bool   `json:"reverseProxy,omitempty"`    // false
+
 	//
 	// Ignore for now
 	//
-	// Proxy              string `json:"proxy,omitempty"`              // "http://proxy40.rt3.io:34168"
-	// ProxyServerPort    int    `json:"proxyServerPort,omitempty"`    // 34168
-	// ProxyURL           string `json:"proxyURL,omitempty"`           // "proxy40.rt3.io:34168"
-	// ReverseProxy       bool   `json:"reverseProxy,omitempty"`       // false
 	// Initiator          string `json:"initiator,omitempty"`          // "nicolae@remote.it"
 	// FilteredIP         string `json:"filteredIP,omitempty"`         // "latching"
 	// P2PConnected       bool   `json:"p2pConnected,omitempty"`       // true
