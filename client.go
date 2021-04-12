@@ -62,7 +62,7 @@ func (thisRef client) CanConnect(onlineCheckEndpoint string, onlineCheckEndpoint
 
 	responseAsString := strings.TrimSpace(string(responseAsBytes))
 
-	return responseAsString == onlineCheckEndpointReply
+	return responseAsString != ""
 }
 
 func (thisRef client) LoginWithPassword(username string, password string) (apiContracts.Authentication, errorx.Error) {
