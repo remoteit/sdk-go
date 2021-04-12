@@ -95,7 +95,7 @@ type DeleteProxyRequest struct {
 
 //
 // SAMPLE
-// curl 'https://api.remot3.it/apv/v27/device/connect/'
+// curl 'https://api.remote.it/apv/v27/device/connect/'
 // -H 'developerKey: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
 // -H 'token: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
 // -H 'Accept-Language: en-US,en;q=0.9'
