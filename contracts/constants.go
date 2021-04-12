@@ -14,7 +14,6 @@ const (
 	DEFAULT_PROXY_CREATE_ISOLATE     = "domain=app.remote.it"
 	DEFAULT_PROXY_CREATE_CONCURRENT  = true
 
-	DEFAULT_ONLINE_CHECK_ENDPOINT       = "https://api.remot3.it"
 	DEFAULT_ONLINE_CHECK_ENDPOINT       = "https://api.remote.it"
 	DEFAULT_ONLINE_CHECK_ENDPOINT_REPLY = "api.remote.it"
 
