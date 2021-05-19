@@ -3,11 +3,12 @@ package contracts
 import "time"
 
 const (
-	DEFAULT_API_URL         = "https://api.remote.it/apv/v27"
-	DEFAULT_API_GRAPHQL_URL = "https://api.remote.it/graphql/v1"
-	DEFAULT_API_RESTORE_URL = "https://install.remote.it/v1/restore"
-	DEFAULT_API_TIMEOUT     = 40 * time.Second
-	DEFAULT_API_USER_AGENT  = "remoteit-sdk-go"
+	DEFAULT_API_URL             = "https://api.remote.it/apv/v27"
+	DEFAULT_API_GRAPHQL_URL     = "https://api.remote.it/graphql/v1"
+	DEFAULT_API_RESTORE_URL     = "https://install.remote.it/v1/restore"
+	DEFAULT_API_CERTIFICATE_URL = "https://install.remote.it/v1/certificate"
+	DEFAULT_API_TIMEOUT         = 40 * time.Second
+	DEFAULT_API_USER_AGENT      = "remoteit-sdk-go"
 
 	DEFAULT_PROXY_CREATE_IP_LATCHING = "255.255.255.255"
 	DEFAULT_PROXY_CREATE_WAIT        = "true"

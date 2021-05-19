@@ -19,8 +19,7 @@ func Test_Restore_Restore(t *testing.T) {
 		t.FailNow()
 	}
 
-	if configAsRaw != nil {
-		t.Error(errx)
+	if configAsRaw == nil {
 		t.FailNow()
 	}
 }

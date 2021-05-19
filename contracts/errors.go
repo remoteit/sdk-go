@@ -95,4 +95,7 @@ var (
 	ErrAPI_GQL_CantReadResponse = errorx.New(6003, "GQL Client - Error read response")
 	ErrAPI_GQL_NotAuthorized    = errorx.New(6004, "GQL Client - Not authorized")
 	ErrAPI_GQL_Error            = errorx.New(5003, "GQL Client - Error communicating")
+
+	ErrAPI_CertClient_Generic           = 7000
+	ErrAPI_CertClient_TokenNotSpecified = errorx.New(2003, "Certificate Client - Token not specified or invalid")
 )
