@@ -3,8 +3,8 @@ package contracts
 type CertificateRequest struct {
 	MachineID string `json:"machineId"`
 	ServiceID string `json:"serviceId"`
-	Name      string `json:"name"`
-	IP        string `json:"ip"`
+	Name      string `json:"name,omitempty"`
+	IP        string `json:"ip,omitempty"`
 }
 
 type CertificateResponse struct {
