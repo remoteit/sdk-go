@@ -12,7 +12,7 @@ import (
 
 type AutoRegistration interface {
 	SendDeviceInfo(registrationKey string, hardwareID string, cpuID string, macAddress string, version string, platformOSName string) errorx.Error
-	GetProductTemplate(registrationKey string, deviceUniquID string) ([]string, bool, errorx.Error)
+	GetProductTemplate(registrationKey string, deviceUniquID string) ([]string, bool, string, errorx.Error)
 	GetServiceConfigFromTemplateID(serviceID string, hardwareID string) (apiContracts.ServiceConfigResponse, errorx.Error)
 	RegisterService(serviceID string, uniqueDeviceID string, registrationKey string) (apiContracts.ServiceCredentials, bool, errorx.Error)
 }
@@ -92,12 +92,12 @@ func (thisRef autoRegistration) SendDeviceInfo(registrationKey string, hardwareI
 	return nil
 }
 
-func (thisRef autoRegistration) GetProductTemplate(registrationKey string, deviceUniquID string) ([]string, bool, errorx.Error) {
+func (thisRef autoRegistration) GetProductTemplate(registrationKey string, deviceUniquID string) ([]string, bool, string, errorx.Error) {
 	var url = fmt.Sprintf("/bulk/registration/device/friendly/configuration/%s/%s/", registrationKey, deviceUniquID)
 
 	raw, errx := thisRef.apiClient.Get(url)
 	if errx != nil {
-		return nil, false, errx
+		return nil, false, "", errx
 	}
 
 	type projectsResponse struct {
@@ -112,14 +112,14 @@ func (thisRef autoRegistration) GetProductTemplate(registrationKey string, devic
 	var resp projectsResponse
 	err := json.Unmarshal(raw, &resp)
 	if err != nil {
-		return nil, false, apiContracts.ErrAutoreg_CantPrepRequest
+		return nil, false, "", apiContracts.ErrAutoreg_CantPrepRequest
 	}
 
 	if resp.Status == apiContracts.API_ERROR_CODE_STATUS_RESET {
-		return nil, true, nil
+		return nil, true, resp.HardwareID, nil
 	}
 
-	return strings.Split(resp.Projects, ","), false, nil
+	return strings.Split(resp.Projects, ","), false, "", nil
 }
 
 func (thisRef autoRegistration) GetServiceConfigFromTemplateID(serviceID string, hardwareID string) (apiContracts.ServiceConfigResponse, errorx.Error) {
